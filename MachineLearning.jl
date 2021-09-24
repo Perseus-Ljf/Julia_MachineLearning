@@ -83,3 +83,31 @@ function pplot!(ax::LScene, w::Vector{<:Real}, b::Real, x_range, y_range)
     f(x, y) = -(w[1]*x+w[2]*y+b)/w[3]
     surface!(ax, x_range, y_range, f)
 end
+
+mutable struct Kdtree
+    location::Vector{<:Real}
+    left
+    right
+end
+
+function kdtree(input_data::Vector{<:Vector{<:Real}}; depth::Int64 = 1)
+    function get_depth(depth::Int64, dims::Int64)
+        if depth%dims == 0
+            return dims
+        else
+            return depth%dims
+        end
+    end
+    if length(input_data) == 0
+        return Nothing
+    end
+    data = reduce(hcat, input_data)
+    dims = length(input_data[1])
+    len = length(input_data)
+    midn = ceil(Int64, len/2)
+    i = get_depth(depth, dims)
+    index = sortperm(data[i, :])
+    left = index[1:midn-1]
+    right = index[midn+1:len]
+    Kdtree(input_data[index[midn]], kdtree(input_data[left], depth = depth+1), kdtree(input_data[right], depth = depth+1))
+end
