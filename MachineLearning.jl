@@ -86,8 +86,8 @@ end
 
 mutable struct Kdtree
     location::Vector{<:Real}
-    left
-    right
+    left::Union{Type{Nothing}, Kdtree}
+    right::Union{Type{Nothing}, Kdtree}
 end
 
 function kdtree(input_data::Vector{<:Vector{<:Real}}; depth::Int64 = 1)
