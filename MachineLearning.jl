@@ -98,33 +98,24 @@ function kdtree(input_data::Vector{<:Vector{<:Real}}; depth::Int64 = 1)
     dims = length(input_data[1])
     len = length(input_data)
     midn = ceil(Int64, len/2)
-    index = sortperm(data[get_depth(depth, dims), :])
+    index = sortperm(data[(depth+2) % dims + 1, :])
     left = index[1:midn-1]
     right = index[midn+1:len]
     Kdtree(input_data[index[midn]], kdtree(input_data[left], depth = depth+1), kdtree(input_data[right], depth = depth+1))
 end
 
-function get_depth(depth::Int64, dims::Int64)
-    if depth%dims == 0
-        return dims
-    else
-        return depth%dims
+function kdfind(input_point::Vector{<:Real}, kdtree::Union{Kdtree, Nothing}; depth = 1)
+    if isnothing(kdtree)
+        return [NaN, NaN], Inf
     end
-end
-
-function kdfind(input_point::Vector{<:Real}, kdtree::Kdtree; depth = 1)
     dims = length(kdtree.location)
-    sa = get_depth(depth, dims)
+    sa = (depth+2) % dims + 1
     #subtree = deepcopy(kdtree)
     #search_path = Vector{Vector{<:Real}}()
-    if (input_point[sa] <= kdtree.location[sa]) & (!isnothing(kdtree.left))
+    if (input_point[sa] <= kdtree.location[sa]) 
         nearestPoint, nearestDistance = kdfind(input_point, kdtree.left, depth = depth + 1)
-        @show 1
-    elseif (input_point[sa] > kdtree.location[sa]) & (!isnothing(kdtree.right))
+    elseif (input_point[sa] > kdtree.location[sa]) 
         nearestPoint, nearestDistance = kdfind(input_point, kdtree.right, depth = depth + 1)
-        @show 2
-    else
-        nearestDistance = Inf
     end
     nowDistance = norm(input_point - kdtree.location)
     if nowDistance < nearestDistance
@@ -136,16 +127,8 @@ function kdfind(input_point::Vector{<:Real}, kdtree::Kdtree; depth = 1)
     if splitDistance > nearestDistance
         return nearestPoint,nearestDistance
     else
-        if input_point[sa] <= kdtree.location[sa]
-            nextTree = kdtree.right
-        else
-            nextTree = kdtree.left
-        end
-        if isnothing(nextTree)
-            nearDistance = Inf
-        else
-            nearPoint, nearDistance = kdfind(input_point, nextTree, depth = depth+1)
-        end
+        nextTree = input_point[sa]<=kdtree.location[sa] ? kdtree.right : kdtree.left
+        nearPoint, nearDistance = kdfind(input_point, nextTree, depth = depth+1)
         if nearDistance < nearestDistance
             nearestDistance = nearDistance
             nearestPoint = deepcopy(nearPoint)
@@ -167,8 +150,5 @@ function kdfind(input_point::Vector{<:Real}, kdtree::Kdtree; depth = 1)
     #     end
     #     depth += 1
     # end
-
-
-
     return nearestPoint, nearestDistance
 end
