@@ -134,21 +134,46 @@ function kdfind(input_point::Vector{<:Real}, kdtree::Union{Kdtree, Nothing}; dep
             nearestPoint = deepcopy(nearPoint)
         end
     end
-    # while true
-    #     push!(search_path, subtree.location)
-    #     i = get_depth(depth, dims)
-    #     if input_point[i] < subtree.location[i]
-    #         if isnothing(subtree.left)
-    #             break
-    #         end
-    #         subtree = subtree.left
-    #     else
-    #         if isnothing(subtree.right)
-    #             break
-    #         end
-    #         subtree = subtree.right
-    #     end
-    #     depth += 1
-    # end
     return nearestPoint, nearestDistance
+end
+
+struct FrequencyData{T}
+    name::Vector{T}
+    frequency::Vector{<:Real}
+end
+
+function get_frequency(data::Vector{<:Any})
+    name_vector = Vector{typeof(data[1])}()
+    times_vector = Vector{Int64}()
+    for i in data
+        isfind = findall(x->x==i, name_vector)
+        if isfind == []
+            push!(name_vector, i)
+            append!(times_vector, 1)
+        else
+            times_vector[isfind[1]] += 1
+        end
+    end
+    frequency_vector = times_vector ./ length(data)
+    return FrequencyData(name_vector, frequency_vector)
+end
+
+function get_frequency(data, target)
+    goal = findall(x->x==target, data)
+    return length(goal)/length(data)
+end
+
+function naive_bayesian(dataset::DataFrame, input_data)
+    namelist = names(dataset)
+    n = length(input_data)
+    goal_fre = get_frequency(dataset[!, namelist[end]])
+    goal_gro = groupby(df, namelist[end])
+    fre_matrix = hcat(zeros(Float64, length(goal_gro), n), goal_fre.frequency)
+    for i in 1:length(goal_gro)
+        df = goal_gro[i]
+        for j in 1:n 
+            fre_matrix[i, j] = get_frequency(df[!, namelist[j]], input_data[j])
+        end
+    end
+    return [reduce(*, fre_matrix[i, :]) for i in 1:length(fre_matrix[:, 1])], goal_fre.name
 end
